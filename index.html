@@ -75,6 +75,7 @@ html,body{width:100%;background:var(--bg);color:var(--tx);font-family:'Noto Sans
 /* LOADING */
 .spinner{width:34px;height:34px;border:3px solid var(--bd);border-top-color:var(--personal);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .ltxt{font-size:12px;color:var(--mt);font-family:'Space Mono',monospace;}
 
 /* ═══ DASHBOARD ═══ */
@@ -118,10 +119,10 @@ html,body{width:100%;background:var(--bg);color:var(--tx);font-family:'Noto Sans
 .cnav{width:26px;height:26px;background:var(--s2);border:1px solid var(--bd);border-radius:6px;color:var(--tx2);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;}
 .cnav:hover{border-color:var(--personal);color:var(--personal);}
 .cal-inner{padding:10px 14px 14px;}
-.wdays{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;}
+.wdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;margin-bottom:4px;}
 .wday{text-align:center;font-size:10px;font-family:'Space Mono',monospace;color:var(--mt);padding:3px 0;text-transform:uppercase;letter-spacing:.4px;}
-.days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
-.day{min-height:66px;padding:5px;border-radius:7px;border:1px solid transparent;transition:background .12s;}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;}
+.day{min-height:66px;padding:4px;border-radius:7px;border:1px solid transparent;transition:background .12s;overflow:hidden;min-width:0;}
 .day:hover{background:var(--s2);border-color:var(--bd);}
 .day.om .dn{color:var(--mt);}
 .day.td{border-color:var(--personal)!important;background:rgba(79,142,247,.07);}
@@ -599,7 +600,9 @@ async function loadEvents(){
           else if(KW_WFH.test(title))  subType='wfh';
           else if(KW_EXT.test(title))  subType='ext';
         }
-        events.push({title,start,end,startTime,endTime,memberIdx,role,subType,
+        // 공구 역할 캘린더: '공구' 키워드 없으면 team으로 강등 (망고슬래브 등 혼용 캘린더 대응)
+        const effectiveRole = (role==='purchase' && !/공구/.test(title)) ? 'team' : role;
+        events.push({title,start,end,startTime,endTime,memberIdx,role:effectiveRole,subType,
           location:ev.location||'',calName:cal.summary,calColor:cal.backgroundColor||'#4f8ef7'});
       });
     }catch(e){console.warn('로드 실패:',cal.summary,e);}
@@ -633,7 +636,14 @@ function initDash(){
 function buildCatFilter(){
   const c=document.getElementById('catBar'); c.innerHTML='<span class="cat-all">카테고리</span>';
   const usedRoles=[...new Set(events.map(e=>e.role).filter(r=>r!=='off'))];
-  // 전체 토글
+
+  // 역할별 대표 색상: 해당 역할의 첫 번째 이벤트의 calColor를 사용
+  const roleCalColor={};
+  usedRoles.forEach(roleId=>{
+    const ev=events.find(e=>e.role===roleId);
+    roleCalColor[roleId]=ev?.calColor || ROLE_MAP[roleId]?.color || '#8888a8';
+  });
+
   const allChip=document.createElement('div');
   allChip.className='cat-chip on'; allChip.id='catAll'; allChip.style.color='var(--tx2)'; allChip.style.borderColor='var(--tx2)';
   allChip.innerHTML=`<span class="cat-pip" style="background:var(--tx2)"></span>전체`;
@@ -645,9 +655,10 @@ function buildCatFilter(){
   c.appendChild(allChip);
   usedRoles.forEach(roleId=>{
     const rd=ROLE_MAP[roleId]||{label:roleId,color:'#8888a8'};
+    const chipColor=roleCalColor[roleId];
     const chip=document.createElement('div');
-    chip.className='cat-chip on'; chip.style.color=rd.color; chip.dataset.cat=roleId;
-    chip.innerHTML=`<span class="cat-pip" style="background:${rd.color}"></span>${rd.label}`;
+    chip.className='cat-chip on'; chip.style.color=chipColor; chip.dataset.cat=roleId;
+    chip.innerHTML=`<span class="cat-pip" style="background:${chipColor}"></span>${rd.label}`;
     chip.addEventListener('click',()=>{
       if(activeCats.has(roleId))activeCats.delete(roleId);else activeCats.add(roleId);
       chip.classList.toggle('on',activeCats.has(roleId)); chip.classList.toggle('off',!activeCats.has(roleId));
@@ -785,12 +796,11 @@ function renderMembers(){
 // ─── ROOM STATUS ───
 function renderRoom(){
   const c=document.getElementById('roomList');
-  const ts=fmt(today.getFullYear(),today.getMonth()+1,today.getDate());
-  // 응접실 역할 이벤트만
+  const now=new Date();
+  const ts=fmt(now.getFullYear(),now.getMonth()+1,now.getDate());
+  const nowMins=now.getHours()*60+now.getMinutes(); // 현재 시각(분 단위)
+
   const roomEvs=events.filter(ev=>ev.role==='room').sort((a,b)=>a.start.localeCompare(b.start));
-  // 오늘 일정 기준으로 상태 판단
-  const todayEvs=roomEvs.filter(ev=>ev.start<=ts&&ts<=ev.end);
-  const upcomingEvs=roomEvs.filter(ev=>ev.start>ts);
   document.getElementById('roomCnt').textContent=`${roomEvs.filter(ev=>ev.end>=ts).length}건`;
   c.innerHTML='';
 
@@ -799,26 +809,56 @@ function renderRoom(){
     return;
   }
 
-  // 오늘 상태 헤더
+  // 현재 시각에 실제로 진행 중인 이벤트 찾기
+  const activeEvs=roomEvs.filter(ev=>{
+    if(ev.start!==ts&&ev.end!==ts&&!(ev.start<ts&&ev.end>ts)) return false; // 오늘이 아님
+    if(ev.startTime&&ev.endTime){
+      // 시간 정보가 있으면 정확히 비교
+      const [sh,sm]=ev.startTime.split(':').map(Number);
+      const [eh,em]=ev.endTime.split(':').map(Number);
+      const startMins=sh*60+sm, endMins=eh*60+em;
+      return nowMins>=startMins && nowMins<endMins;
+    }
+    // 종일 이벤트: 날짜만 비교
+    return ev.start<=ts&&ts<=ev.end;
+  });
+
+  const upcomingEvs=roomEvs.filter(ev=>{
+    if(ev.start<ts) return false;
+    if(ev.start===ts&&ev.startTime){
+      const [sh,sm]=ev.startTime.split(':').map(Number);
+      return (sh*60+sm)>nowMins;
+    }
+    return ev.start>ts;
+  });
+
+  const isInUse=activeEvs.length>0;
+
+  // 상태 헤더
   const statusDiv=document.createElement('div');
-  const isInUse=todayEvs.length>0;
   statusDiv.style.cssText=`display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bd);background:${isInUse?'rgba(34,211,238,.07)':'rgba(62,207,142,.07)'};`;
+  const glowColor=isInUse?'var(--room)':'var(--car)';
   statusDiv.innerHTML=`
-    <div style="width:10px;height:10px;border-radius:50%;background:${isInUse?'var(--room)':'var(--car)'};box-shadow:0 0 6px ${isInUse?'var(--room)':'var(--car)'};flex-shrink:0"></div>
-    <div>
-      <div style="font-size:12px;font-weight:700;color:${isInUse?'var(--room)':'var(--car)'}">${isInUse?'사용 중':'비어있음'}</div>
-      ${isInUse?`<div style="font-size:10px;color:var(--mt);margin-top:1px">${todayEvs[0].title}${todayEvs[0].startTime?' · '+todayEvs[0].startTime+(todayEvs[0].endTime?'~'+todayEvs[0].endTime:''):''}</div>`:'<div style="font-size:10px;color:var(--mt);margin-top:1px">현재 예약 없음</div>'}
+    <div style="width:10px;height:10px;border-radius:50%;background:${glowColor};box-shadow:0 0 7px ${glowColor};flex-shrink:0;animation:${isInUse?'pulse 2s ease-in-out infinite':'none'}"></div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:12px;font-weight:700;color:${glowColor}">${isInUse?'사용 중':'비어있음'}</div>
+      <div style="font-size:10px;color:var(--mt);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        ${isInUse
+          ? `${activeEvs[0].title}${activeEvs[0].startTime?' · '+activeEvs[0].startTime+(activeEvs[0].endTime?'~'+activeEvs[0].endTime:''):''}`
+          : upcomingEvs[0]
+            ? `다음: ${upcomingEvs[0].title} · ${upcomingEvs[0].start===ts?upcomingEvs[0].startTime||'오늘':upcomingEvs[0].start.slice(5)}`
+            : '오늘 남은 예약 없음'}
+      </div>
     </div>
   `;
   c.appendChild(statusDiv);
 
-  // 다가오는 예약 목록
-  const showEvs=[...todayEvs.filter((_,i)=>i>0),...upcomingEvs].slice(0,6);
-  if(!showEvs.length) return;
+  // 오늘 이후 예약 목록 (현재 진행중 + 앞으로)
+  const showEvs=[...activeEvs,...upcomingEvs].slice(0,6);
   showEvs.forEach(ev=>{
-    const isTd=ev.start<=ts&&ts<=ev.end;
+    const isCurrent=activeEvs.includes(ev);
     const mbName=ev.memberIdx>=0?(members[ev.memberIdx]?.name||'?'):'';
-    const item=document.createElement('div'); item.className='citem';
+    const item=document.createElement('div');
     item.style.cssText='padding:8px 14px;border-bottom:1px solid var(--bd);transition:background .13s;';
     item.onmouseenter=()=>item.style.background='var(--s2)'; item.onmouseleave=()=>item.style.background='';
     item.innerHTML=`
@@ -826,7 +866,10 @@ function renderRoom(){
         <div style="font-size:12px;font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.title}</div>
         <div style="font-size:10px;font-family:'Space Mono',monospace;color:var(--mt);flex-shrink:0">${ev.start===ts?'오늘':ev.start.slice(5)}</div>
       </div>
-      <div style="font-size:10px;color:var(--mt);margin-top:2px">${mbName?mbName+' · ':''}${ev.startTime?ev.startTime+(ev.endTime?'~'+ev.endTime:''):'종일'}${isTd?' <span style="color:var(--room);font-weight:700">● 진행중</span>':''}</div>
+      <div style="font-size:10px;color:var(--mt);margin-top:2px;display:flex;align-items:center;gap:5px">
+        <span>${mbName?mbName+' · ':''}${ev.startTime?ev.startTime+(ev.endTime?'~'+ev.endTime:''):'종일'}</span>
+        ${isCurrent?`<span style="color:var(--room);font-weight:700;font-size:9px">● 진행중</span>`:''}
+      </div>
     `;
     item.addEventListener('mouseenter',e=>showTip(e,ev)); item.addEventListener('mouseleave',hideTip);
     c.appendChild(item);
