@@ -242,7 +242,7 @@ html,body{width:100%;background:var(--bg);color:var(--tx);font-family:'Noto Sans
         <div class="leg-i"><span class="leg-dot" style="background:var(--personal)"></span><span style="font-size:11px">개인일정</span></div>
         <div class="leg-i"><span class="leg-dot" style="background:var(--car)"></span><span style="font-size:11px">법인차</span></div>
         <div class="leg-i"><span class="leg-dot" style="background:var(--purchase)"></span><span style="font-size:11px">공동구매</span></div>
-        <div class="leg-i"><span class="leg-dot" style="background:var(--team)"></span><span style="font-size:11px">팀일정</span></div>
+        <div class="leg-i"><span class="leg-dot" style="background:var(--team)"></span><span style="font-size:11px">망고슬래브</span></div>
         <div class="leg-i"><span class="leg-dot" style="background:var(--room)"></span><span style="font-size:11px">응접실</span></div>
         <div class="leg-i"><span class="leg-dot" style="background:var(--other)"></span><span style="font-size:11px">기타</span></div>
       </div>
@@ -287,10 +287,6 @@ html,body{width:100%;background:var(--bg);color:var(--tx);font-family:'Noto Sans
       <button class="btn" id="syncBtn" onclick="doSync(this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         새로고침
-      </button>
-      <button class="btn" onclick="openPM()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-        공동구매 추가
       </button>
       <button class="btn" onclick="goSetup()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -382,17 +378,17 @@ html,body{width:100%;background:var(--bg);color:var(--tx);font-family:'Noto Sans
 <!-- TOOLTIP -->
 <div class="tip" id="tip"><div class="tip-t" id="tipT"></div><div class="tip-s" id="tipS"></div></div>
 
-<!-- PURCHASE MODAL -->
-<div class="mov" id="pm">
-  <div class="modal">
-    <div class="mtit">공동구매 추가 <button class="mclose" onclick="closeM('pm')">✕</button></div>
-    <div class="fg"><label class="fl">상품명</label><input class="fi" id="pName" placeholder="예: 맥세이프 충전기"></div>
-    <div class="frow">
-      <div class="fg"><label class="fl">마감일</label><input class="fi" id="pDl" type="date"></div>
-      <div class="fg"><label class="fl">목표 인원</label><input class="fi" id="pTgt" type="number" placeholder="10" min="1"></div>
+<!-- DAY DETAIL PANEL -->
+<div class="mov" id="dayPanel">
+  <div class="modal" style="width:460px;max-height:80vh;display:flex;flex-direction:column;">
+    <div class="mtit">
+      <div>
+        <div id="dpDate" style="font-size:15px;font-weight:700;font-family:'Space Mono',monospace"></div>
+        <div id="dpDay" style="font-size:11px;color:var(--mt);margin-top:2px;font-family:'Space Mono',monospace"></div>
+      </div>
+      <button class="mclose" onclick="closeM('dayPanel')">✕</button>
     </div>
-    <div class="fg"><label class="fl">현재 참여 인원</label><input class="fi" id="pCur" type="number" placeholder="0" min="0"></div>
-    <button class="mbtn" onclick="savePur()">저장</button>
+    <div id="dpList" style="overflow-y:auto;flex:1;margin:0 -20px;padding:0 20px 4px;display:flex;flex-direction:column;gap:6px;"></div>
   </div>
 </div>
 
@@ -408,7 +404,7 @@ const ROLES = [
   { id:'personal', label:'개인일정', cssVar:'--personal', color:'#4f8ef7' },
   { id:'car',      label:'법인차',   cssVar:'--car',      color:'#3ecf8e' },
   { id:'purchase', label:'공동구매', cssVar:'--purchase', color:'#f59e0b' },
-  { id:'team',     label:'팀일정',   cssVar:'--team',     color:'#a78bfa' },
+  { id:'team',     label:'망고슬래브', cssVar:'--team',     color:'#a78bfa' },
   { id:'room',     label:'응접실',   cssVar:'--room',     color:'#22d3ee' },
   { id:'other',    label:'기타',     cssVar:'--other',    color:'#8888a8' },
   { id:'off',      label:'표시 안 함', cssVar:'--mt',     color:'#55556a' },
@@ -432,7 +428,7 @@ const roleColor = (roleId) => ROLE_MAP[roleId]?.color || '#8888a8';
 // ═══════════════════════════════════════════════
 const today = new Date();
 let vy = today.getFullYear(), vm = today.getMonth();
-let allCals=[], events=[], purchases=JSON.parse(localStorage.getItem('tm_pur')||'[]');
+let allCals=[], events=[];
 let members  = JSON.parse(localStorage.getItem('tm_mem') || '[]');
 let calRoles = JSON.parse(localStorage.getItem('tm_roles')|| '{}');
 let calOn    = JSON.parse(localStorage.getItem('tm_calon')|| '{}');
@@ -737,25 +733,86 @@ function renderCal(){
     const ds=fmt(cl.yr,cl.mo+1,cl.d),isT=ds===ts;
     const devs=fev().filter(ev=>ev.start<=ds&&ds<=ev.end);
     const div=document.createElement('div'); div.className='day'+(cl.om?' om':'')+(isT?' td':'');
+    div.style.cursor='pointer';
     const dn=document.createElement('div'); dn.className='dn'; dn.textContent=cl.d;
     if(!cl.om){const dow=new Date(ds).getDay();if(dow===0)dn.style.color='var(--rose)';if(dow===6)dn.style.color='var(--personal)';}
     div.appendChild(dn);
     devs.slice(0,2).forEach(ev=>{
-      const rc=roleColor(ev.role);
+      const rc=ev.calColor||roleColor(ev.role);
       const chip=document.createElement('div'); chip.className='echip';
-      chip.style.background=h2r(rc,.18); chip.style.color=rc;
+      chip.style.background=h2r(rc,.2); chip.style.color=rc;
       chip.textContent=ev.title;
-      chip.addEventListener('mouseenter',e=>showTip(e,ev)); chip.addEventListener('mouseleave',hideTip);
       div.appendChild(chip);
     });
     if(devs.length>2){const m=document.createElement('div');m.style.cssText='font-size:8px;color:var(--mt);font-family:Space Mono,monospace;padding:1px 2px';m.textContent=`+${devs.length-2}`;div.appendChild(m);}
+    div.addEventListener('click',()=>openDayPanel(ds,cl.d,cl.mo,cl.yr));
     c.appendChild(div);
   });
 }
 function chM(dir){
   if(dir===0){vy=today.getFullYear();vm=today.getMonth();}
   else{vm+=dir;if(vm>11){vm=0;vy++;}if(vm<0){vm=11;vy--;}}
-  renderCal();renderUpcoming();
+  renderCal();renderMembers();
+}
+
+// ─── DAY DETAIL PANEL ───
+function openDayPanel(ds,d,mo,yr){
+  const WEEK=['일','월','화','수','목','금','토'];
+  const MO_KO=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const dow=new Date(ds).getDay();
+  const ts=fmt(today.getFullYear(),today.getMonth()+1,today.getDate());
+  const isToday=ds===ts;
+
+  document.getElementById('dpDate').textContent=`${yr}년 ${MO_KO[mo]} ${d}일`;
+  const dayLabel=document.getElementById('dpDay');
+  dayLabel.textContent=`${WEEK[dow]}요일${isToday?' · 오늘':''}`;
+  dayLabel.style.color=dow===0?'var(--rose)':dow===6?'var(--personal)':'var(--mt)';
+
+  // 해당 날짜의 전체 이벤트 (필터 적용, 시간순 정렬)
+  const dayEvs=fev()
+    .filter(ev=>ev.start<=ds&&ds<=ev.end)
+    .sort((a,b)=>{
+      if(!a.startTime&&!b.startTime) return 0;
+      if(!a.startTime) return -1;
+      if(!b.startTime) return 1;
+      return a.startTime.localeCompare(b.startTime);
+    });
+
+  const list=document.getElementById('dpList'); list.innerHTML='';
+  if(!dayEvs.length){
+    list.innerHTML='<div style="text-align:center;padding:24px;color:var(--mt);font-size:12px">이 날짜의 일정이 없습니다</div>';
+  } else {
+    dayEvs.forEach(ev=>{
+      const rc=ev.calColor||roleColor(ev.role);
+      const rd=ROLE_MAP[ev.role]||{label:'기타'};
+      const mbName=ev.memberIdx>=0?(members[ev.memberIdx]?.name||''):'';
+      const isAllDay=!ev.startTime;
+      const timeStr=isAllDay?'종일':`${ev.startTime}${ev.endTime?' ~ '+ev.endTime:''}`;
+      const isMultiDay=ev.start!==ev.end;
+
+      const item=document.createElement('div');
+      item.style.cssText=`display:flex;gap:10px;padding:10px 12px;border-radius:8px;background:var(--s2);border:1px solid var(--bd);transition:border-color .15s;cursor:default;`;
+      item.onmouseenter=()=>item.style.borderColor=rc; item.onmouseleave=()=>item.style.borderColor='var(--bd)';
+      item.innerHTML=`
+        <div style="width:3px;border-radius:2px;background:${rc};flex-shrink:0;align-self:stretch;min-height:36px"></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px">
+            <div style="font-size:13px;font-weight:600;flex:1;min-width:0;word-break:break-word">${ev.title}</div>
+            <div style="font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;flex-shrink:0;background:${h2r(rc,.2)};color:${rc}">${rd.label}</div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--tx2)">
+            <span>🕐 ${timeStr}</span>
+            ${mbName?`<span>👤 ${mbName}</span>`:''}
+            ${isMultiDay?`<span style="color:var(--mt)">📆 ${ev.start} ~ ${ev.end}</span>`:''}
+            ${ev.location?`<span>📍 ${ev.location}</span>`:''}
+          </div>
+          <div style="font-size:10px;color:var(--mt);margin-top:3px">📅 ${ev.calName}</div>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+  document.getElementById('dayPanel').classList.add('open');
 }
 
 // ─── MEMBER STATUS ───
@@ -880,34 +937,35 @@ function renderRoom(){
 function renderPurchase(){
   const c=document.getElementById('purList');
   const ts=fmt(today.getFullYear(),today.getMonth()+1,today.getDate());
-  const calPurs=events.filter(ev=>ev.role==='purchase'&&ev.end>=ts)
-    .map(ev=>({name:ev.title,deadline:ev.end,fromCal:true}));
-  const all=[...calPurs,...purchases];
-  document.getElementById('purCnt').textContent=`${all.length}건`;
+  const calPurs=events
+    .filter(ev=>ev.role==='purchase'&&ev.end>=ts)
+    .sort((a,b)=>a.start.localeCompare(b.start));
+  document.getElementById('purCnt').textContent=`${calPurs.length}건`;
   c.innerHTML='';
-  if(!all.length){c.innerHTML='<div class="empty"><div class="eico">🛒</div>진행 중인 공동구매 없음<br><span style="font-size:10px;display:block;margin-top:4px">상단 버튼으로 추가하세요</span></div>';return;}
-  all.forEach((p,idx)=>{
+  if(!calPurs.length){
+    c.innerHTML='<div class="empty"><div class="eico">🛒</div>진행 중인 공동구매 없음</div>';
+    return;
+  }
+  const MO=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  calPurs.forEach(ev=>{
+    const d=new Date(ev.start);
+    const rc=ev.calColor||roleColor(ev.role);
+    const mbName=ev.memberIdx>=0?(members[ev.memberIdx]?.name||''):'';
+    const daysLeft=Math.ceil((new Date(ev.end)-new Date(ts))/(1000*60*60*24));
+    const urgency=daysLeft<=3?'var(--rose)':daysLeft<=7?'var(--purchase)':'var(--mt)';
     const item=document.createElement('div'); item.className='pitem';
-    if(p.fromCal){
-      item.innerHTML=`
-        <div class="ptop"><div class="pname" style="color:var(--purchase)">${p.name}</div><div class="pdl">${p.deadline}</div></div>
-        <div class="pcal-tag">📅 캘린더 일정</div>
-      `;
-    } else {
-      const pct=Math.min(100,Math.round(p.current/p.target*100));
-      const col=pct>=100?'var(--car)':pct>=60?'var(--personal)':'var(--purchase)';
-      item.innerHTML=`
-        <div class="ptop">
-          <div class="pname">${p.name}</div>
-          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-            <div class="pdl">${p.deadline}</div>
-            <span style="font-size:11px;color:var(--mt);cursor:pointer" onmouseover="this.style.color='var(--rose)'" onmouseout="this.style.color='var(--mt)'" onclick="delPur(${idx-calPurs.length})">✕</span>
-          </div>
+    item.innerHTML=`
+      <div class="ptop">
+        <div class="pname" style="color:${rc}">${ev.title}</div>
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+          <div style="font-size:9px;font-weight:700;color:${urgency}">${daysLeft===0?'오늘 마감':daysLeft>0?`D-${daysLeft}`:'마감'}</div>
+          <div class="pdl">${ev.end}</div>
         </div>
-        <div class="pbar"><div class="pfill" style="width:${pct}%;background:${col}"></div></div>
-        <div class="pmeta"><span>${p.current}/${p.target}명</span><span style="color:${col};font-weight:700">${pct}%</span></div>
-      `;
-    }
+      </div>
+      <div style="font-size:10px;color:var(--mt)">${mbName?`👤 ${mbName} · `:''}📅 ${ev.calName}${ev.startTime?' · '+ev.startTime+(ev.endTime?'~'+ev.endTime:''):''}</div>
+    `;
+    item.style.cursor='pointer';
+    item.addEventListener('click',()=>openDayPanel(ev.start,new Date(ev.start).getDate(),new Date(ev.start).getMonth(),new Date(ev.start).getFullYear()));
     c.appendChild(item);
   });
 }
@@ -927,21 +985,8 @@ function showTip(e,ev){
 function moveTip(e){const t=document.getElementById('tip');t.style.left=(e.clientX+14)+'px';t.style.top=(e.clientY+14)+'px';}
 function hideTip(){document.getElementById('tip').classList.remove('on');document.removeEventListener('mousemove',moveTip);}
 
-// ─── PURCHASE MODAL ───
-function openPM(){
-  const d=new Date(today);d.setDate(d.getDate()+14);
-  document.getElementById('pDl').value=fmt(d.getFullYear(),d.getMonth()+1,d.getDate());
-  document.getElementById('pName').value='';document.getElementById('pTgt').value='';document.getElementById('pCur').value='0';
-  document.getElementById('pm').classList.add('open');
-}
 function closeM(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.mov').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
-function savePur(){
-  const name=document.getElementById('pName').value.trim();if(!name){alert('상품명 입력');return;}
-  purchases.push({name,deadline:document.getElementById('pDl').value,target:parseInt(document.getElementById('pTgt').value)||10,current:parseInt(document.getElementById('pCur').value)||0});
-  localStorage.setItem('tm_pur',JSON.stringify(purchases));closeM('pm');renderPurchase();
-}
-function delPur(idx){if(!confirm(`"${purchases[idx].name}" 삭제?`))return;purchases.splice(idx,1);localStorage.setItem('tm_pur',JSON.stringify(purchases));renderPurchase();}
 
 // BOOT
 window.onload=()=>{initGapi();initGsi();};
